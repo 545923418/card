@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D卡片基础结构</title>
+    <link rel="stylesheet" href="test.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        /* 飘落图片样式 */
+        .falling-image {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            animation: fall linear infinite;
+            top: -100px;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+            }
+            100% {
+                transform: translateY(100vh) translateX(100px) rotate(360deg);
+            }
+        }
+
+        /* 添加横向飘过的动画 */
+        .floating-626 {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            animation: floatAcross 12s linear;
+            width: 150px;
+            height: auto;
+            right: -150px;
+        }
+
+        @keyframes floatAcross {
+            0% {
+                transform: translateX(100vw) translateY(0);
+            }
+            50% {
+                transform: translateX(0) translateY(-100px);
+            }
+            100% {
+                transform: translateX(-150vw) translateY(0);
+            }
+        }
+
+        /* 圣诞树的样式 */
+        .christmas-tree {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            z-index: 6;
+        }
+
+        .tree-part {
+            width: 0;
+            height: 0;
+            border-left: 50px solid transparent;
+            border-right: 50px solid transparent;
+            margin: 0 auto;
+        }
+
+        .tree-top {
+            border-bottom: 40px solid #2d5a27;
+        }
+
+        .tree-middle {
+            border-bottom: 50px solid #1a4720;
+            border-left: 65px solid transparent;
+            border-right: 65px solid transparent;
+        }
+
+        .tree-bottom {
+            border-bottom: 60px solid #0d3817;
+            border-left: 80px solid transparent;
+            border-right: 80px solid transparent;
+        }
+
+        .tree-trunk {
+            width: 30px;
+            height: 40px;
+            background: #3d1f00;
+            margin: 0 auto;
+        }
+
+        .tree-star {
+            color: #ffd700;
+            font-size: 30px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .tree-decorations {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .decoration {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <audio id="birthdaySong" src="birthday-song.mp3"></audio>
+    <audio id="jingleBells" src="Jingle Bells.mp3"></audio>
+
+    <div class="card">
+        <!-- 外页 -->
+        <div class="outside">
+            <div class="front">
+                <p>Happy Birthday</p>
+                <div class="cake">
+                    <div class="top-layer"></div>
+                    <div class="middle-layer"></div>
+                    <div class="bottom-layer"></div>
+                    <div class="candle"></div>
+                </div>
+            </div>
+            <div class="back">
+                <img src="image1.jpg" class="top-left-image">
+                <img src="flower.png" class="flower-image">
+                <img src="image2.png" class="bottom-right-image">
+            </div>
+        </div>
+        <!-- 中间页 -->
+        <div class="middle">
+            <div class="front">
+                <img src="wish.png" class="wish-image">
+                <div id="gift-container">
+                    <h1 id="gift">&#127873;</h1>
+                </div>
+            </div>
+            <div class="back">
+                <img src="image3.png" class="top-left-image">
+                <img src="tree.png" class="flower-image">
+                <img src="image4.png" class="bottom-right-image">
+            </div>
+        </div>
+        <!-- 内页 -->
+        <div class="inside">
+            <div class="front">
+                <img src="wish2.png" class="wish-image">
+                <div class="snowflake">❄</div>
+            </div>
+            <div class="back"></div>
+        </div>
+    </div>
+
+    <script>
+        const middle = document.querySelector('.middle');
+        const outside = document.querySelector('.outside');
+        const card = document.querySelector('.card');
+        let isClicked = false;
+        let fallingInterval, denseInterval, confettiInterval;
+        let currentAudio = null;
+
+        function stopAllEffects() {
+            clearInterval(fallingInterval);
+            clearInterval(denseInterval);
+            clearInterval(confettiInterval);
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+        }
+
+        middle.addEventListener('click', function(e) {
+            if (e.target.id === 'gift' || e.target.classList.contains('gift-image')) {
+                return;
+            }
+            isClicked = true;
+            outside.style.transform = 'rotateY(-160deg)';
+            this.style.transform = 'rotateY(-130deg)';
+            this.style.zIndex = '5';
+            stopAllEffects();
+        });
+
+        card.addEventListener('mouseleave', function() {
+            if (document.querySelector('.snowflake img')) { // 如果雪花已经变成了HelloKitty2
+                // 修改文字
+                const happyBirthday = document.querySelector('.outside p');
+                if (happyBirthday) {
+                    happyBirthday.textContent = 'Merry Christmas';
+                }
+
+                // 替换蛋糕为圣诞树
+                const cake = document.querySelector('.cake');
+                if (cake) {
+                    cake.innerHTML = `
+                        <div class="christmas-tree">
+                            <div class="tree-star">★</div>
+                            <div class="tree-part tree-top"></div>
+                            <div class="tree-part tree-middle"></div>
+                            <div class="tree-part tree-bottom"></div>
+                            <div class="tree-trunk"></div>
+                            <div class="tree-decorations">
+                                ${generateDecorations()}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // 原有的合上动画
+            outside.style.transform = 'rotateY(0deg)';
+            middle.style.transform = 'rotateY(0deg)';
+            isClicked = false;
+            outside.removeAttribute('style');
+            middle.removeAttribute('style');
+            middle.style.zIndex = '3';
+        });
+
+        card.addEventListener('mouseenter', function() {
+            if (!isClicked) {
+                outside.removeAttribute('style');
+                middle.removeAttribute('style');
+                middle.style.zIndex = '3';
+            }
+        });
+
+        function createFallingImage(type) {
+            const image = document.createElement('img');
+            const randomNum = Math.random();
+            if (type === 'falling') {
+                if (randomNum < 0.25) {
+                    image.src = 'falling1.png';
+                } else if (randomNum < 0.5) {
+                    image.src = 'falling2.png';
+                } else if (randomNum < 0.75) {
+                    image.src = 'falling3.png';
+                } else {
+                    image.src = 'falling4.png';
+                }
+            } else {
+                if (randomNum < 0.25) {
+                    image.src = 'snow1.png';
+                } else if (randomNum < 0.5) {
+                    image.src = 'snow2.png';
+                } else if (randomNum < 0.75) {
+                    image.src = 'snow3.png';
+                } else {
+                    image.src = 'snow4.png';
+                }
+            }
+            image.classList.add('falling-image');
+            
+            const size = Math.random() * 30 + 20;
+            image.style.width = size + 'px';
+            image.style.height = 'auto';
+            
+            image.style.left = Math.random() * 100 + '%';
+            
+            image.style.opacity = Math.random() * 0.6 + 0.4;
+            
+            const duration = Math.random() * 5 + 3;
+            image.style.animationDuration = duration + 's';
+
+            document.body.appendChild(image);
+
+            setTimeout(() => {
+                image.remove();
+            }, duration * 1000);
+        }
+
+        document.getElementById('gift').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const giftContainer = document.getElementById('gift-container');
+            giftContainer.innerHTML = '<img src="HelloKitty1.png" class="gift-image">';
+            
+            currentAudio = document.getElementById('birthdaySong');
+            currentAudio.play();
+
+            fallingInterval = setInterval(() => createFallingImage('falling'), 100);
+            
+            for(let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    createFallingImage('falling');
+                }, i * 100);
+            }
+
+            denseInterval = setInterval(() => {
+                for(let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        createFallingImage('falling');
+                    }, i * 100);
+                }
+            }, 1000);
+
+            confettiInterval = setInterval(function() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.6 }
+                });
+
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.6 }
+                });
+
+                confetti({
+                    particleCount: 30,
+                    spread: 360,
+                    startVelocity: 30,
+                    gravity: 0.5,
+                    origin: { x: Math.random(), y: Math.random() * 0.3 + 0.5 },
+                    colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff']
+                });
+            }, 200);
+        });
+
+        function create626Image() {
+            const image = document.createElement('img');
+            image.src = '626.png';
+            image.classList.add('floating-626');
+            
+            // 随机垂直位置（在上半部分）
+            const baseTop = Math.random() * (window.innerHeight * 0.3) + 100; // 确保有足够空间向上运动
+            image.style.top = baseTop + 'px';
+            
+            document.body.appendChild(image);
+
+            // 动画结束后移除元素
+            image.addEventListener('animationend', () => {
+                image.remove();
+            });
+        }
+
+        document.querySelector('.snowflake').addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            // 替换雪花为更大的 HelloKitty2
+            this.innerHTML = '<img src="HelloKitty2.png" style="width: 100px; height: auto;">';
+            
+            // 播放 Jingle Bells
+            currentAudio = document.getElementById('jingleBells');
+            currentAudio.play();
+
+            // 创建飘落的雪花（增加频率）
+            fallingInterval = setInterval(() => createFallingImage('snow'), 50); // 从100ms改为50ms
+            
+            // 初始创建一组密集的雪花（增加数量）
+            for(let i = 0; i < 20; i++) { // 从10个增加到20个
+                setTimeout(() => {
+                    createFallingImage('snow');
+                }, i * 50); // 间隔也缩短到50ms
+            }
+
+            // 每1秒创建一组密集的雪花（增加每组数量）
+            denseInterval = setInterval(() => {
+                for(let i = 0; i < 10; i++) { // 从5个增加到10个
+                    setTimeout(() => {
+                        createFallingImage('snow');
+                    }, i * 50); // 间隔缩短到50ms
+                }
+            }, 800); // 间隔从1000ms缩短到800ms
+
+            // 立即创建第一批626
+            for(let i = 0; i < 3; i++) {
+                setTimeout(() => create626Image(), i * 800);
+            }
+
+            // 随机创建626图片
+            const create626Randomly = () => {
+                // 创建1-3个626
+                const count = Math.floor(Math.random() * 3) + 1;
+                for(let i = 0; i < count; i++) {
+                    setTimeout(() => create626Image(), i * 800);
+                }
+                // 1.5-3秒后再次检查
+                setTimeout(create626Randomly, Math.random() * 1500 + 1500);
+            };
+
+            // 0.5秒后开始随机创建
+            setTimeout(create626Randomly, 500);
+        });
+
+        // 生成装饰品的函数
+        function generateDecorations() {
+            let decorations = '';
+            const colors = ['#ff0000', '#ffff00', '#ff69b4', '#4169e1', '#ffd700'];
+            
+            // 添加15个随机位置的装饰球
+            for (let i = 0; i < 15; i++) {
+                const left = Math.random() * 160 - 80; // -80px到80px之间
+                const top = Math.random() * 150; // 0到150px之间
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                decorations += `
+                    <div class="decoration" style="
+                        left: calc(50% + ${left}px);
+                        top: ${top}px;
+                        background-color: ${color};
+                    "></div>
+                `;
+            }
+            
+            return decorations;
+        }
+    </script>
+</body>
+</html>
